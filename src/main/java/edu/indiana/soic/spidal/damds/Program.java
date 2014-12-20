@@ -61,6 +61,7 @@ public class Program {
             //  Set up MPI and threads parallelism
             ParallelOps.setupParallelism(args);
             ParallelOps.setParallelDecomposition(config.numberDataPoints);
+
             distances = BinaryReader
                     .readRowRange(config.distanceMatrixFile, ParallelOps.localRowRange, ParallelOps.globalColCount,
                                   byteOrder, config.isMemoryMapped, true);

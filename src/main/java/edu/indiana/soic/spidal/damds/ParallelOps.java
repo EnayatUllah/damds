@@ -8,9 +8,7 @@ import mpi.MPI;
 import mpi.MPIException;
 
 import java.nio.ByteBuffer;
-
-import static edu.rice.hj.Module0.finalizeHabanero;
-import static edu.rice.hj.Module0.initializeHabanero;
+import java.util.stream.IntStream;
 
 public class ParallelOps {
     public static int nodeCount=1;
@@ -21,63 +19,79 @@ public class ParallelOps {
     public static int mpiSize;
     public static String parallelPattern;
 
-    public static int localRowStartOffset;
-    public static int localRowCount;
-    public static Range localRowRange;
-    public static int localPointStartOffset;
+    public static Range procRowRange;
+    public static int procRowStartOffset;
+    public static int procRowCount;
+    public static int procPointStartOffset;
+
+    public static Range[] threadRowRanges;
+    public static int[] threadRowStartOffsets;
+    public static int[] threadRowCounts;
+    public static int[] threadPointStartOffsets;
+
 
     public static int globalColCount;
+
     // Buffers for MPI operations
     private static ByteBuffer statBuffer;
 
     public static void setupParallelism(String[] args) throws MPIException {
-        // Set up threads
-        initializeHabanero();
-
-        //  Set up MPI
         MPI.Init(args);
         mpiComm = MPI.COMM_WORLD; //initializing MPI world communicator
         mpiRank = mpiComm.getRank();
         mpiSize = mpiComm.getSize();
 
-        // Set up MPI
         int mpiPerNode = mpiSize / nodeCount;
 
-        if ((mpiPerNode * nodeCount) != mpiSize)
-        {
-            Utils.printAndThrowRuntimeException("Inconsistent MPI counts Nodes " + nodeCount + " Size " + mpiSize);
+        if ((mpiPerNode * nodeCount) != mpiSize) {
+            Utils.printAndThrowRuntimeException(
+                "Inconsistent MPI counts Nodes " + nodeCount + " Size " +
+                mpiSize);
         }
 
-        // Set up MPI buffers
         statBuffer = MPI.newByteBuffer(DoubleStatistics.extent);
 
-        parallelPattern = "---------------------------------------------------------\nMachine:" + MPI.getProcessorName() + " " + threadCount + "x" + mpiPerNode + "x" + nodeCount;
+        parallelPattern =
+            "---------------------------------------------------------\n" +
+            "Machine:" + MPI.getProcessorName() + " " +
+            threadCount + "x" + mpiPerNode + "x" + nodeCount;
         Utils.printMessage(parallelPattern);
     }
 
     public static void tearDownParallelism() throws MPIException {
-        // Finalize threads
-        finalizeHabanero();
-
         // End MPI
         MPI.Finalize();
     }
 
     public static void setParallelDecomposition(int globalRowCount) {
         //	First divide points among processes
-        Range[] rowRanges = RangePartitioner.Partition(globalRowCount, mpiSize);
+        Range[] rowRanges = RangePartitioner.partition(globalRowCount, mpiSize);
         Range rowRange = rowRanges[mpiRank]; // The range of points for this process
 
-        localRowRange = rowRange;
-        localRowStartOffset = rowRange.getStartIndex();
-        localRowCount = rowRange.getLength();
+        procRowRange = rowRange;
+        procRowStartOffset = rowRange.getStartIndex();
+        procRowCount = rowRange.getLength();
         globalColCount = globalRowCount;
-        localPointStartOffset = localRowStartOffset*globalColCount;
+        procPointStartOffset = procRowStartOffset * globalColCount;
+
+        // Next partition points per process among threads
+        threadRowRanges = RangePartitioner.partition(procRowCount, threadCount);
+        IntStream.range(0, threadCount).parallel().forEach(
+            threadIdx -> {
+                Range threadRowRange = threadRowRanges[threadIdx];
+                threadRowCounts[threadIdx] = threadRowRange.getLength();
+                threadRowStartOffsets[threadIdx] =
+                    procRowStartOffset + threadRowRange.getStartIndex();
+                threadPointStartOffsets[threadIdx] =
+                    threadRowStartOffsets[threadIdx] * globalColCount;
+            });
     }
 
-    public static DoubleStatistics allReduce(DoubleStatistics stat) throws MPIException {
+    public static DoubleStatistics allReduce(DoubleStatistics stat) throws
+        MPIException {
         stat.addToBuffer(statBuffer,0);
-        mpiComm.allReduce(statBuffer, DoubleStatistics.extent, MPI.BYTE, DoubleStatistics.reduceSummaries());
+        mpiComm.allReduce(statBuffer, DoubleStatistics.extent, MPI.BYTE,
+                          DoubleStatistics.reduceSummaries());
         return DoubleStatistics.getFromBuffer(statBuffer, 0);
     }
 }

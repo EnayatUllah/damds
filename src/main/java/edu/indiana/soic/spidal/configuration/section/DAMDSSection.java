@@ -10,7 +10,7 @@ public class DAMDSSection {
         try {
             p.load(new FileInputStream(configurationFilePath));
             distanceMatrixFile = p.getProperty("DistanceMatrixFile", "distance.bin");
-            weightMatrixFile = p.getProperty("WeightMatrixFile", "distance.bin");
+            weightMatrixFile = p.getProperty("WeightMatrixFile", "weights.bin");
             labelFile = p.getProperty("LabelFile", "labels.txt");
             pointsFile = p.getProperty("PointsFile", "points.txt");
             timingFile = p.getProperty("TimingFile", "timings.txt");

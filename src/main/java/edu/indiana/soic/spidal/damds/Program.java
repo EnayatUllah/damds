@@ -84,71 +84,37 @@ public class Program {
                 ParallelOps.globalColCount, byteOrder, config.isMemoryMapped,
                 true);
 
-            DoubleStatistics distanceSummary;
-            final DoubleStatistics[] threadDistanceSummaries =
-                new DoubleStatistics[ParallelOps.threadCount];
-            if (config.isSammon) {
-                // Sammon mode
-                // Use all distances
-
-                launchHabaneroApp(
-                    () -> forallChunked(0, ParallelOps.threadCount - 1,
-                        (threadIdx) -> threadDistanceSummaries[threadIdx] =
-                            IntStream.range(
-                                0, ParallelOps.threadRowCounts[threadIdx] *
-                                   ParallelOps.globalColCount).mapToDouble(
-                                i -> {
-                                    int pnum = i +
-                                               ParallelOps
-                                                   .threadPointStartOffsets[threadIdx];
-                                    return distances.getValue(
-                                        pnum / ParallelOps.globalColCount,
-                                        pnum % ParallelOps.globalColCount);
-                                }).collect(
-                                DoubleStatistics::new,
-                                DoubleStatistics::accept,
-                                DoubleStatistics::combine)));
-
-                // TODO - complete from here -- sum withing threads
-
-                // TODO - remove after implementing the threaded version
-                distanceSummary = IntStream.range(
-                    0, ParallelOps.procRowCount * ParallelOps.globalColCount)
-                                           .parallel().mapToDouble(
-                        i -> distances.getValue(
-                            (i + ParallelOps.procPointStartOffset) /
-                            ParallelOps.globalColCount,
-                            (i + ParallelOps.procPointStartOffset) %
-                            ParallelOps.globalColCount)).collect(
-                        DoubleStatistics::new, DoubleStatistics::accept,
-                        DoubleStatistics::combine);
-            }
-            else {
-                // Non Sammon mode
-                // Use only distances that have non zero corresponding weights
+            if (!config.isSammon){
                 weights = BinaryReader.readRowRange(
                     config.weightMatrixFile, ParallelOps.procRowRange,
                     ParallelOps.globalColCount, byteOrder,
                     config.isMemoryMapped, false);
-
-                distanceSummary = IntStream.range(
-                    0, ParallelOps.procRowCount * ParallelOps.globalColCount)
-                                           .parallel().filter(
-                        i -> weights.getValue(
-                            (i + ParallelOps.procPointStartOffset) /
-                            ParallelOps.globalColCount,
-                            (i + ParallelOps.procPointStartOffset) %
-                            ParallelOps.globalColCount) != 0).mapToDouble(
-                        i -> distances.getValue(
-                            (i + ParallelOps.procPointStartOffset) /
-                            ParallelOps.globalColCount,
-                            (i + ParallelOps.procPointStartOffset) %
-                            ParallelOps.globalColCount)).collect(
-                        DoubleStatistics::new, DoubleStatistics::accept,
-                        DoubleStatistics::combine);
             }
-            distanceSummary = ParallelOps.allReduce(distanceSummary);
-            Utils.printMessage(distanceSummary.toString());
+
+            final DoubleStatistics[] threadDistanceSummaries =
+                new DoubleStatistics[ParallelOps.threadCount];
+
+            if (ParallelOps.threadCount > 1) {
+                launchHabaneroApp(
+                    () -> forallChunked(
+                        0, ParallelOps.threadCount - 1,
+                        (threadIdx) -> threadDistanceSummaries[threadIdx] =
+                            summarizeDistances(threadIdx, config.isSammon)));
+                // Sum across threads and accumulate to zeroth entry
+                IntStream.range(1, ParallelOps.threadCount).forEach(
+                    threadIdx -> threadDistanceSummaries[0]
+                        .combine(threadDistanceSummaries[threadIdx]));
+            }
+            else {
+                threadDistanceSummaries[0] =
+                    summarizeDistances(0, config.isSammon);
+            }
+
+            if (ParallelOps.procCount > 1) {
+                threadDistanceSummaries[0] =
+                    ParallelOps.allReduce(threadDistanceSummaries[0]);
+            }
+            Utils.printMessage(threadDistanceSummaries[0].toString());
 
             ParallelOps.tearDownParallelism();
 
@@ -158,6 +124,49 @@ public class Program {
         }
 
 
+    }
+
+    private static DoubleStatistics summarizeDistances(
+        int threadIdx, boolean isSammon) {
+        if (isSammon) {
+            // Sammon mode
+            // Use all distances
+            return IntStream.range(
+                0, ParallelOps.threadRowCounts[threadIdx] *
+                   ParallelOps.globalColCount).mapToDouble(
+                i -> {
+                    int pnum =
+                        i + ParallelOps.threadPointStartOffsets[threadIdx];
+                    return distances.getValue(
+                        pnum / ParallelOps.globalColCount,
+                        pnum % ParallelOps.globalColCount);
+                }).collect(
+                DoubleStatistics::new, DoubleStatistics::accept,
+                DoubleStatistics::combine);
+        }
+        else {
+            // Non Sammon mode
+            // Use only distances that have non zero corresponding weights
+            return IntStream.range(
+                0, ParallelOps.threadRowCounts[threadIdx] *
+                   ParallelOps.globalColCount).parallel().filter(
+                i -> {
+                    int pnum =
+                        i + ParallelOps.threadPointStartOffsets[threadIdx];
+                    return weights.getValue(
+                        pnum / ParallelOps.globalColCount,
+                        pnum % ParallelOps.globalColCount) != 0;
+                }).mapToDouble(
+                i -> {
+                    int pnum =
+                        i + ParallelOps.threadPointStartOffsets[threadIdx];
+                    return distances.getValue(
+                        pnum / ParallelOps.globalColCount,
+                        pnum % ParallelOps.globalColCount);
+                }).collect(
+                DoubleStatistics::new, DoubleStatistics::accept,
+                DoubleStatistics::combine);
+        }
     }
 
     /*TODO - Remove after testing*/

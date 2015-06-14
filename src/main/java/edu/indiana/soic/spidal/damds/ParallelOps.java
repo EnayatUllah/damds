@@ -14,9 +14,9 @@ public class ParallelOps {
     public static int nodeCount=1;
     public static int threadCount=1;
 
-    public static Intracomm mpiComm;
-    public static int mpiRank;
-    public static int mpiSize;
+    public static Intracomm procComm;
+    public static int procRank;
+    public static int procCount;
     public static String parallelPattern;
 
     public static Range procRowRange;
@@ -37,16 +37,16 @@ public class ParallelOps {
 
     public static void setupParallelism(String[] args) throws MPIException {
         MPI.Init(args);
-        mpiComm = MPI.COMM_WORLD; //initializing MPI world communicator
-        mpiRank = mpiComm.getRank();
-        mpiSize = mpiComm.getSize();
+        procComm = MPI.COMM_WORLD; //initializing MPI world communicator
+        procRank = procComm.getRank();
+        procCount = procComm.getSize();
 
-        int mpiPerNode = mpiSize / nodeCount;
+        int mpiPerNode = procCount / nodeCount;
 
-        if ((mpiPerNode * nodeCount) != mpiSize) {
+        if ((mpiPerNode * nodeCount) != procCount) {
             Utils.printAndThrowRuntimeException(
                 "Inconsistent MPI counts Nodes " + nodeCount + " Size " +
-                mpiSize);
+                procCount);
         }
 
         statBuffer = MPI.newByteBuffer(DoubleStatistics.extent);
@@ -65,8 +65,9 @@ public class ParallelOps {
 
     public static void setParallelDecomposition(int globalRowCount) {
         //	First divide points among processes
-        Range[] rowRanges = RangePartitioner.partition(globalRowCount, mpiSize);
-        Range rowRange = rowRanges[mpiRank]; // The range of points for this process
+        Range[] rowRanges = RangePartitioner.partition(globalRowCount,
+                                                       procCount);
+        Range rowRange = rowRanges[procRank]; // The range of points for this process
 
         procRowRange = rowRange;
         procRowStartOffset = rowRange.getStartIndex();
@@ -90,8 +91,9 @@ public class ParallelOps {
     public static DoubleStatistics allReduce(DoubleStatistics stat) throws
         MPIException {
         stat.addToBuffer(statBuffer,0);
-        mpiComm.allReduce(statBuffer, DoubleStatistics.extent, MPI.BYTE,
-                          DoubleStatistics.reduceSummaries());
+        procComm.allReduce(
+            statBuffer, DoubleStatistics.extent, MPI.BYTE,
+            DoubleStatistics.reduceSummaries());
         return DoubleStatistics.getFromBuffer(statBuffer, 0);
     }
 }

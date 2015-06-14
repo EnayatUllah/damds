@@ -77,6 +77,9 @@ public class ParallelOps {
 
         // Next partition points per process among threads
         threadRowRanges = RangePartitioner.partition(procRowCount, threadCount);
+        threadRowCounts = new int[threadCount];
+        threadRowStartOffsets = new int[threadCount];
+        threadPointStartOffsets = new int[threadCount];
         IntStream.range(0, threadCount).parallel().forEach(
             threadIdx -> {
                 Range threadRowRange = threadRowRanges[threadIdx];

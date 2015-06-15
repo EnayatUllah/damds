@@ -85,7 +85,7 @@ public class ParallelOps {
                 Range threadRowRange = threadRowRanges[threadIdx];
                 threadRowCounts[threadIdx] = threadRowRange.getLength();
                 threadRowStartOffsets[threadIdx] =
-                    procRowStartOffset + threadRowRange.getStartIndex();
+                    threadRowRange.getStartIndex();
                 threadPointStartOffsets[threadIdx] =
                     threadRowStartOffsets[threadIdx] * globalColCount;
             });

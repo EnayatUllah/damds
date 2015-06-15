@@ -10,6 +10,8 @@ import mpi.MPIException;
 import org.apache.commons.cli.*;
 
 import java.nio.ByteOrder;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.stream.IntStream;
 
 import static edu.rice.hj.Module0.launchHabaneroApp;
@@ -71,25 +73,18 @@ public class Program {
             return;
         }
 
+        System.out.println("== DAMDS run started on " + new Date() + " ==");
+
         //  Read Metadata using this as source of other metadata
-        ReadControlFile(cmd);
+        readConfiguration(cmd);
+        System.out.println(config.toString(true));
 
         try {
             //  Set up MPI and threads parallelism
             ParallelOps.setupParallelism(args);
             ParallelOps.setParallelDecomposition(config.numberDataPoints);
 
-            distances = BinaryReader.readRowRange(
-                config.distanceMatrixFile, ParallelOps.procRowRange,
-                ParallelOps.globalColCount, byteOrder, config.isMemoryMapped,
-                true);
-
-            if (!config.isSammon){
-                weights = BinaryReader.readRowRange(
-                    config.weightMatrixFile, ParallelOps.procRowRange,
-                    ParallelOps.globalColCount, byteOrder,
-                    config.isMemoryMapped, false);
-            }
+            readDistancesAndWeights();
 
             final DoubleStatistics[] threadDistanceSummaries =
                 new DoubleStatistics[ParallelOps.threadCount];
@@ -126,6 +121,19 @@ public class Program {
 
     }
 
+    private static void readDistancesAndWeights() {
+        distances = BinaryReader.readRowRange(
+            config.distanceMatrixFile, ParallelOps.procRowRange,
+            ParallelOps.globalColCount, byteOrder, config.isMemoryMapped, true);
+
+        if (!config.isSammon){
+            weights = BinaryReader.readRowRange(
+                config.weightMatrixFile, ParallelOps.procRowRange,
+                ParallelOps.globalColCount, byteOrder,
+                config.isMemoryMapped, false);
+        }
+    }
+
     private static DoubleStatistics summarizeDistances(
         int threadIdx, boolean isSammon) {
         if (isSammon) {
@@ -149,7 +157,7 @@ public class Program {
             // Use only distances that have non zero corresponding weights
             return IntStream.range(
                 0, ParallelOps.threadRowCounts[threadIdx] *
-                   ParallelOps.globalColCount).parallel().filter(
+                   ParallelOps.globalColCount).filter(
                 i -> {
                     int pnum =
                         i + ParallelOps.threadPointStartOffsets[threadIdx];
@@ -169,13 +177,9 @@ public class Program {
         }
     }
 
-    /*TODO - Remove after testing*/
 
-    private static void printParams() {
-        System.out.println("IsSammon=" + config.isSammon);
-        System.out.println("IsBigEndian=" + config.isBigEndian);
-        System.out.println("IsMemoryMapped=" + config.isMemoryMapped);
-    }
+
+
 
     /*TODO - Remove after testing*/
     private static void print(
@@ -193,7 +197,7 @@ public class Program {
         System.out.println(sb.toString());
     }
 
-    private static void ReadControlFile(CommandLine cmd) {
+    private static void readConfiguration(CommandLine cmd) {
         config = ConfigurationMgr.LoadConfiguration(
             cmd.getOptionValue(Constants.CMD_OPTION_LONG_C)).damdsSection;
         ParallelOps.nodeCount =

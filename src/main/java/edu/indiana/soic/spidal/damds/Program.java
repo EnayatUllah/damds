@@ -103,8 +103,42 @@ public class Program {
         }
     }
 
-    private static double calculateStress(double[][] preX, double tCur) {
+    private static double calculateStress(double[][] preX, double tCur, int targetDimension, double distanceTransform, boolean isSammon) {
+        double sigma = 0.0;
 
+        double diff = 0;
+        if (tCur > 10E-10) {
+            diff = Math.sqrt(2.0 * targetDimension) * tCur;
+        }
+
+        int tmpI = 0;
+        for (int i = rowOffset; i < rowOffset + rowHeight; i++) {
+            tmpI = i - rowOffset;
+            for (int j = 0; j < N; j++) {
+                double origD = deltaMatData[tmpI][j]*1.0 / Short.MAX_VALUE;
+                boolean missingDist = origD < 0;
+                origD = distanceTransform != 1.0 ? Math.pow(origD, distanceTransform) : origD;
+                double weight = missingDist ? 0.0 : (sammonMapping ? 1.0 / Math.max(origD, 0.001 * averageOriginalDistance) : weights[tmpI][j]);
+                if (!sammonMapping && missingDist){
+                    weights[tmpI][j] = 0; // for the non Sammon case we rely on user given weights, but in the case of missing distances override user weight by zero
+                }
+                if(weight != 0){
+                    double dist;
+                    if (j != i) {
+                        dist = calculateDistance(preXData, preXData[0].length, i, j);
+                    } else {
+                        dist = 0;
+                    }
+                    double heatDist = origD - diff;
+                    double d = origD >= diff
+                               ? heatDist - dist : 0;
+                    sigma += weight * d * d;
+                }
+            }
+        }
+        // Send the partial sigma.
+        collector.collect(new StringKey("stress-map-to-reduce-key"),
+                          new DoubleValue(sigma));
 
     }
 

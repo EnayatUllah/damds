@@ -13,6 +13,7 @@ import org.apache.commons.cli.*;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 import static edu.rice.hj.Module0.launchHabaneroApp;
@@ -87,14 +88,44 @@ public class Program {
 
             readDistancesAndWeights();
             DoubleStatistics distanceSummary = computeStatistics();
-
             Utils.printMessage(distanceSummary.toString());
+
+            double[][] preX = generateInitMapping(
+                config.numberDataPoints, config.targetDimension);
+            double tCur = 0.0;
+            double preStress = calculateStress(preX, tCur);
+
 
             ParallelOps.tearDownParallelism();
         }
         catch (MPIException e) {
             Utils.printAndThrowRuntimeException(new RuntimeException(e));
         }
+    }
+
+    private static double calculateStress(double[][] preX, double tCur) {
+
+
+    }
+
+    static double[][] generateInitMapping(int numDataPoints,
+                                          int targetDim) {
+        double matX[][] = new double[numDataPoints][targetDim];
+        // Use Random class for generating random initial mapping solution.
+        // Test the solution for the same problem by setting a constant random
+        // see as shown below.
+        // Random rand = new Random(47);
+        Random rand = new Random(System.currentTimeMillis()); // Real random
+        // seed.
+        for (int i = 0; i < numDataPoints; i++) {
+            for (int j = 0; j < targetDim; j++) {
+                if(rand.nextBoolean())
+                    matX[i][j] = rand.nextDouble();
+                else
+                    matX[i][j] = -rand.nextDouble();
+            }
+        }
+        return matX;
     }
 
     private static DoubleStatistics computeStatistics()

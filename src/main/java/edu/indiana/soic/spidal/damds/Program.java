@@ -74,16 +74,16 @@ public class Program {
             return;
         }
 
-        Utils.printMessage("\n== DAMDS run started on " + new Date() + " ==");
-
-        //  Read Metadata using this as source of other metadata
-        readConfiguration(cmd);
-        Utils.printMessage(config.toString(true));
-
         try {
+            //  Read Metadata using this as source of other metadata
+            readConfiguration(cmd);
+
             //  Set up MPI and threads parallelism
             ParallelOps.setupParallelism(args);
             ParallelOps.setParallelDecomposition(config.numberDataPoints);
+
+            Utils.printMessage("\n== DAMDS run started on " + new Date() + " ==");
+            Utils.printMessage(config.toString(true));
 
             readDistancesAndWeights();
             RefObj<Integer> missingDistCount = new RefObj<>();

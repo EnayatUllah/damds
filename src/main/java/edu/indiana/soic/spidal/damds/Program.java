@@ -4,16 +4,13 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import edu.indiana.soic.spidal.common.BinaryReader;
 import edu.indiana.soic.spidal.common.DoubleStatistics;
-import edu.indiana.soic.spidal.common.Range;
 import edu.indiana.soic.spidal.common.RefObj;
 import edu.indiana.soic.spidal.configuration.ConfigurationMgr;
 import edu.indiana.soic.spidal.configuration.section.DAMDSSection;
-import edu.rice.hj.api.SuspendableException;
 import mpi.MPIException;
 import org.apache.commons.cli.*;
 
 import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Random;
 import java.util.stream.IntStream;
@@ -77,11 +74,11 @@ public class Program {
             return;
         }
 
-        System.out.println("== DAMDS run started on " + new Date() + " ==");
+        Utils.printMessage("\n== DAMDS run started on " + new Date() + " ==");
 
         //  Read Metadata using this as source of other metadata
         readConfiguration(cmd);
-        System.out.println(config.toString(true));
+        Utils.printMessage(config.toString(true));
 
         try {
             //  Set up MPI and threads parallelism
@@ -90,18 +87,19 @@ public class Program {
 
             readDistancesAndWeights();
             RefObj<Integer> missingDistCount = new RefObj<>();
-            DoubleStatistics distanceSummary = computeStatistics(missingDistCount);
+            DoubleStatistics distanceSummary = calculateStatistics(
+                missingDistCount);
 
             double missingDistPercent = missingDistCount.getValue() /
                                         (Math.pow(config.numberDataPoints, 2));
-            Utils.printMessage(distanceSummary.toString() +"\nMissing pair percentatge=" +
+            Utils.printMessage("\nDistance summary \n" + distanceSummary.toString() +"\n  MissingDistPercentage=" +
                                missingDistPercent);
 
             double[][] preX = generateInitMapping(
                 config.numberDataPoints, config.targetDimension);
             double tCur = 0.0;
-            // TODO - continue from here
-            /*double preStress = calculateStress(preX, tCur);*/
+            double preStress = calculateStress(preX, tCur, config.targetDimension, config.isSammon, distanceSummary.getAverage());
+            Utils.printMessage("\nInitial stress=" + preStress);
 
 
             ParallelOps.tearDownParallelism();
@@ -111,46 +109,84 @@ public class Program {
         }
     }
 
-/*
-    private static double calculateStress(double[][] preX, double tCur, int targetDimension, boolean isSammon) {
-        double sigma = 0.0;
+    private static double calculateStress(double[][] preX, double tCur, int targetDimension, boolean isSammon, double avgDist)
 
-        double diff = 0;
-        if (tCur > 10E-10) {
-            diff = Math.sqrt(2.0 * targetDimension) * tCur;
+        throws MPIException {
+        final double [] sigmaValues = new double [ParallelOps.threadCount];
+        IntStream.range(0, ParallelOps.threadCount).forEach(i -> sigmaValues[i] = 0.0);
+
+        if (ParallelOps.threadCount > 1) {
+            launchHabaneroApp(
+                () -> forallChunked(
+                    0, ParallelOps.threadCount - 1,
+                    (threadIdx) -> sigmaValues[threadIdx] =
+                        calculateStressInternal(threadIdx, preX, targetDimension, tCur, isSammon, avgDist)));
+            // Sum across threads and accumulate to zeroth entry
+            IntStream.range(1, ParallelOps.threadCount).forEach(
+                i -> {
+                    sigmaValues[0] += sigmaValues[i];
+                });
+        }
+        else {
+            sigmaValues[0] = calculateStressInternal(0, preX, targetDimension, tCur, isSammon, avgDist);
         }
 
-        int tmpI = 0;
-        for (int i = rowOffset; i < rowOffset + rowHeight; i++) {
-            tmpI = i - rowOffset;
-            for (int j = 0; j < N; j++) {
-                double origD = deltaMatData[tmpI][j]*1.0 / Short.MAX_VALUE;
-                boolean missingDist = origD < 0;
-                origD = distanceTransform != 1.0 ? Math.pow(origD, distanceTransform) : origD;
-                double weight = missingDist ? 0.0 : (sammonMapping ? 1.0 / Math.max(origD, 0.001 * averageOriginalDistance) : weights[tmpI][j]);
-                if (!sammonMapping && missingDist){
-                    weights[tmpI][j] = 0; // for the non Sammon case we rely on user given weights, but in the case of missing distances override user weight by zero
-                }
-                if(weight != 0){
-                    double dist;
-                    if (j != i) {
-                        dist = calculateDistance(preXData, preXData[0].length, i, j);
-                    } else {
-                        dist = 0;
-                    }
-                    double heatDist = origD - diff;
-                    double d = origD >= diff
-                               ? heatDist - dist : 0;
-                    sigma += weight * d * d;
-                }
-            }
+        if (ParallelOps.procCount > 1) {
+            sigmaValues[0] = ParallelOps.allReduce(sigmaValues[0]);
         }
-        // Send the partial sigma.
-        collector.collect(new StringKey("stress-map-to-reduce-key"),
-                          new DoubleValue(sigma));
-
+        return sigmaValues[0];
     }
-*/
+
+    private static double calculateStressInternal(
+        int threadIdx, double[][] preX, int targetDim, double tCur,
+        boolean isSammon, double avgDist) {
+
+        double sigma = 0.0;
+        double diff = 0.0;
+        if (tCur > 10E-10) {
+            diff = Math.sqrt(2.0 * targetDim) * tCur;
+        }
+
+        int pointCount =
+            ParallelOps.threadRowCounts[threadIdx] * ParallelOps.globalColCount;
+
+        for (int i = 0; i < pointCount; ++i) {
+            int procLocalPnum =
+                i + ParallelOps.threadPointStartOffsets[threadIdx];
+            double origD = distances.getValue(procLocalPnum);
+            double weight = weights.getValue(procLocalPnum);
+
+            if (origD < 0 || weight == 0) {
+                continue;
+            }
+
+            weight = isSammon ? 1.0 / Math.max(origD, 0.001 * avgDist) : weight;
+            int globalPointStart =
+                procLocalPnum + ParallelOps.procPointStartOffset;
+            int globalRow = globalPointStart / ParallelOps.globalColCount;
+            int globalCol = globalPointStart % ParallelOps.globalColCount;
+
+            double euclideanD = globalRow != globalCol ? calculateEuclideanDist(
+                preX, targetDim, globalRow, globalCol) : 0.0;
+
+            double heatD = origD - diff;
+            double tmpD = origD >= diff ? heatD - euclideanD : 0;
+            sigma += weight * tmpD * tmpD;
+        }
+        return sigma;
+    }
+
+    private static double calculateEuclideanDist(
+        double[][] vectors, int targetDim, int i, int j) {
+        double dist = 0.0;
+        for (int k = 0; k < targetDim; k++) {
+            double diff = vectors[i][k] - vectors[j][k];
+            dist += diff * diff;
+        }
+
+        dist = Math.sqrt(dist);
+        return dist;
+    }
 
     static double[][] generateInitMapping(int numDataPoints,
                                           int targetDim) {
@@ -173,7 +209,8 @@ public class Program {
         return matX;
     }
 
-    private static DoubleStatistics computeStatistics(RefObj<Integer> missingDistCount)
+    private static DoubleStatistics calculateStatistics(
+        RefObj<Integer> missingDistCount)
         throws MPIException {
         final DoubleStatistics[] threadDistanceSummaries =
             new DoubleStatistics[ParallelOps.threadCount];
@@ -185,7 +222,8 @@ public class Program {
                 () -> forallChunked(
                     0, ParallelOps.threadCount - 1,
                     (threadIdx) -> threadDistanceSummaries[threadIdx] =
-                        summarizeDistances(threadIdx, missingDistCounts)));
+                        calculateStatisticsInternal(
+                            threadIdx, missingDistCounts)));
             // Sum across threads and accumulate to zeroth entry
             IntStream.range(1, ParallelOps.threadCount).forEach(
                 i -> {
@@ -195,7 +233,8 @@ public class Program {
                 });
         }
         else {
-            threadDistanceSummaries[0] = summarizeDistances(0, missingDistCounts);
+            threadDistanceSummaries[0] = calculateStatisticsInternal(
+                0, missingDistCounts);
         }
 
         if (ParallelOps.procCount > 1) {
@@ -222,7 +261,8 @@ public class Program {
             false);
     }
 
-    private static DoubleStatistics summarizeDistances(int threadIdx, int [] missingDistCounts) {
+    private static DoubleStatistics calculateStatisticsInternal(
+        int threadIdx, int[] missingDistCounts) {
 
         DoubleStatistics stat = new DoubleStatistics();
         int pointCount =  ParallelOps.threadRowCounts[threadIdx] *
@@ -230,15 +270,15 @@ public class Program {
         for (int i = 0; i < pointCount; ++i){
             int procLocalPnum =
                 i + ParallelOps.threadPointStartOffsets[threadIdx];
-            double d = distances.getValue(procLocalPnum);
-            double w = weights.getValue(procLocalPnum);
-            if (d < 0) {
+            double origD = distances.getValue(procLocalPnum);
+            double weight = weights.getValue(procLocalPnum);
+            if (origD < 0) {
                 // Missing distance
                 ++missingDistCounts[threadIdx];
                 continue;
             }
-            if (w == 0) continue; // Ignore zero weights
-            stat.accept(d);
+            if (weight == 0) continue; // Ignore zero weights
+            stat.accept(origD);
         }
         return stat;
     }

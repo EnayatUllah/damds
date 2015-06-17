@@ -98,7 +98,7 @@ public class Program {
             double[][] preX = generateInitMapping(
                 config.numberDataPoints, config.targetDimension);
             double tCur = 0.0;
-            double preStress = calculateStress(preX, tCur, config.targetDimension, config.isSammon, distanceSummary.getAverage());
+            double preStress = calculateStress(preX, tCur, config.targetDimension, config.isSammon, distanceSummary.getAverage(), distanceSummary.getSum());
             Utils.printMessage("\nInitial stress=" + preStress);
 
 
@@ -109,7 +109,7 @@ public class Program {
         }
     }
 
-    private static double calculateStress(double[][] preX, double tCur, int targetDimension, boolean isSammon, double avgDist)
+    private static double calculateStress(double[][] preX, double tCur, int targetDimension, boolean isSammon, double avgDist, double sumDist)
 
         throws MPIException {
         final double [] sigmaValues = new double [ParallelOps.threadCount];
@@ -134,7 +134,7 @@ public class Program {
         if (ParallelOps.procCount > 1) {
             sigmaValues[0] = ParallelOps.allReduce(sigmaValues[0]);
         }
-        return sigmaValues[0];
+        return sigmaValues[0] / sumDist;
     }
 
     private static double calculateStressInternal(

@@ -1,9 +1,11 @@
 package edu.indiana.soic.spidal.damds;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import edu.indiana.soic.spidal.common.BinaryReader;
 import edu.indiana.soic.spidal.common.DoubleStatistics;
 import edu.indiana.soic.spidal.common.Range;
+import edu.indiana.soic.spidal.common.RefObj;
 import edu.indiana.soic.spidal.configuration.ConfigurationMgr;
 import edu.indiana.soic.spidal.configuration.section.DAMDSSection;
 import edu.rice.hj.api.SuspendableException;
@@ -87,13 +89,19 @@ public class Program {
             ParallelOps.setParallelDecomposition(config.numberDataPoints);
 
             readDistancesAndWeights();
-            DoubleStatistics distanceSummary = computeStatistics();
-            Utils.printMessage(distanceSummary.toString());
+            RefObj<Integer> missingDistCount = new RefObj<>();
+            DoubleStatistics distanceSummary = computeStatistics(missingDistCount);
+
+            double missingDistPercent = missingDistCount.getValue() /
+                                        (Math.pow(config.numberDataPoints, 2));
+            Utils.printMessage(distanceSummary.toString() +"\nMissing pair percentatge=" +
+                               missingDistPercent);
 
             double[][] preX = generateInitMapping(
                 config.numberDataPoints, config.targetDimension);
             double tCur = 0.0;
-            double preStress = calculateStress(preX, tCur);
+            // TODO - continue from here
+            /*double preStress = calculateStress(preX, tCur);*/
 
 
             ParallelOps.tearDownParallelism();
@@ -103,7 +111,8 @@ public class Program {
         }
     }
 
-    private static double calculateStress(double[][] preX, double tCur, int targetDimension, double distanceTransform, boolean isSammon) {
+/*
+    private static double calculateStress(double[][] preX, double tCur, int targetDimension, boolean isSammon) {
         double sigma = 0.0;
 
         double diff = 0;
@@ -141,6 +150,7 @@ public class Program {
                           new DoubleValue(sigma));
 
     }
+*/
 
     static double[][] generateInitMapping(int numDataPoints,
                                           int targetDim) {
@@ -149,8 +159,9 @@ public class Program {
         // Test the solution for the same problem by setting a constant random
         // see as shown below.
         // Random rand = new Random(47);
-        Random rand = new Random(System.currentTimeMillis()); // Real random
-        // seed.
+
+        // Real random seed.
+        Random rand = new Random(System.currentTimeMillis());
         for (int i = 0; i < numDataPoints; i++) {
             for (int j = 0; j < targetDim; j++) {
                 if(rand.nextBoolean())
@@ -162,31 +173,37 @@ public class Program {
         return matX;
     }
 
-    private static DoubleStatistics computeStatistics()
+    private static DoubleStatistics computeStatistics(RefObj<Integer> missingDistCount)
         throws MPIException {
         final DoubleStatistics[] threadDistanceSummaries =
             new DoubleStatistics[ParallelOps.threadCount];
+        final int [] missingDistCounts = new int[ParallelOps.threadCount];
+        IntStream.range(0, ParallelOps.threadCount).forEach(i -> missingDistCounts[i] = 0);
 
         if (ParallelOps.threadCount > 1) {
             launchHabaneroApp(
                 () -> forallChunked(
                     0, ParallelOps.threadCount - 1,
                     (threadIdx) -> threadDistanceSummaries[threadIdx] =
-                        summarizeDistances(threadIdx, config.isSammon)));
+                        summarizeDistances(threadIdx, missingDistCounts)));
             // Sum across threads and accumulate to zeroth entry
             IntStream.range(1, ParallelOps.threadCount).forEach(
-                threadIdx -> threadDistanceSummaries[0]
-                    .combine(threadDistanceSummaries[threadIdx]));
+                i -> {
+                    threadDistanceSummaries[0]
+                        .combine(threadDistanceSummaries[i]);
+                    missingDistCounts[0] += missingDistCounts[i];
+                });
         }
         else {
-            threadDistanceSummaries[0] =
-                summarizeDistances(0, config.isSammon);
+            threadDistanceSummaries[0] = summarizeDistances(0, missingDistCounts);
         }
 
         if (ParallelOps.procCount > 1) {
             threadDistanceSummaries[0] =
                 ParallelOps.allReduce(threadDistanceSummaries[0]);
+            missingDistCounts[0] = ParallelOps.allReduce(missingDistCounts[0]);
         }
+        missingDistCount.setValue(missingDistCounts[0]);
         return threadDistanceSummaries[0];
     }
 
@@ -194,52 +211,36 @@ public class Program {
         distances = BinaryReader.readRowRange(
             config.distanceMatrixFile, ParallelOps.procRowRange,
             ParallelOps.globalColCount, byteOrder, config.isMemoryMapped, true);
-
-        if (!config.isSammon){
-            weights = BinaryReader.readRowRange(
-                config.weightMatrixFile, ParallelOps.procRowRange,
-                ParallelOps.globalColCount, byteOrder,
-                config.isMemoryMapped, false);
+        if (config.distanceTransform != 1.0){
+            distances = BinaryReader.transform(d -> d < 0 ? d : Math.pow(d, config.distanceTransform), distances);
         }
+
+        weights = Strings.isNullOrEmpty(config.weightMatrixFile) ? BinaryReader
+            .readConstant(1.0) : BinaryReader.readRowRange(
+            config.weightMatrixFile, ParallelOps.procRowRange,
+            ParallelOps.globalColCount, byteOrder, config.isMemoryMapped,
+            false);
     }
 
-    private static DoubleStatistics summarizeDistances(
-        int threadIdx, boolean isSammon) {
-        if (isSammon) {
-            // Sammon mode
-            // Use all distances
-            return IntStream.range(
-                0, ParallelOps.threadRowCounts[threadIdx] *
-                   ParallelOps.globalColCount).mapToDouble(
-                i -> {
-                    int procLocalPnum =
-                        i + ParallelOps.threadPointStartOffsets[threadIdx];
-                    double d = distances.getValue(procLocalPnum);
-                    return config.distanceTransform != 1.0 ? Math.pow(d, config.distanceTransform) : d;
-                }).collect(
-                DoubleStatistics::new, DoubleStatistics::accept,
-                DoubleStatistics::combine);
+    private static DoubleStatistics summarizeDistances(int threadIdx, int [] missingDistCounts) {
+
+        DoubleStatistics stat = new DoubleStatistics();
+        int pointCount =  ParallelOps.threadRowCounts[threadIdx] *
+                          ParallelOps.globalColCount;
+        for (int i = 0; i < pointCount; ++i){
+            int procLocalPnum =
+                i + ParallelOps.threadPointStartOffsets[threadIdx];
+            double d = distances.getValue(procLocalPnum);
+            double w = weights.getValue(procLocalPnum);
+            if (d < 0) {
+                // Missing distance
+                ++missingDistCounts[threadIdx];
+                continue;
+            }
+            if (w == 0) continue; // Ignore zero weights
+            stat.accept(d);
         }
-        else {
-            // Non Sammon mode
-            // Use only distances that have non zero corresponding weights
-            return IntStream.range(
-                0, ParallelOps.threadRowCounts[threadIdx] *
-                   ParallelOps.globalColCount).filter(
-                i -> {
-                    int procLocalPnum =
-                        i + ParallelOps.threadPointStartOffsets[threadIdx];
-                    return weights.getValue(procLocalPnum) != 0;
-                }).mapToDouble(
-                i -> {
-                    int procLocalPnum =
-                        i + ParallelOps.threadPointStartOffsets[threadIdx];
-                    double d = distances.getValue(procLocalPnum);
-                    return config.distanceTransform != 1.0 ? Math.pow(d, config.distanceTransform) : d;
-                }).collect(
-                DoubleStatistics::new, DoubleStatistics::accept,
-                DoubleStatistics::combine);
-        }
+        return stat;
     }
 
     private static void readConfiguration(CommandLine cmd) {

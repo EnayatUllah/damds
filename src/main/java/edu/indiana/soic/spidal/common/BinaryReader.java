@@ -14,7 +14,18 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 public interface BinaryReader {
+    public interface DoubleToDoubleFunction{
+        public double apply(double value);
+    }
     public double getValue(int procLocalPnum);
+
+    public static BinaryReader transform(DoubleToDoubleFunction trans, BinaryReader reader){
+        return (procLocalPnum) -> trans.apply(reader.getValue(procLocalPnum));
+    }
+
+    public static BinaryReader readConstant(double constant){
+        return (procLocalPnum) -> constant;
+    }
 
     public static BinaryReader readRowRange(
         String fname, Range rows, int globalColCount, ByteOrder endianness,

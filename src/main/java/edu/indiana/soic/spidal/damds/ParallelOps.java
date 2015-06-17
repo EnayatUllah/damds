@@ -8,6 +8,8 @@ import mpi.MPI;
 import mpi.MPIException;
 
 import java.nio.ByteBuffer;
+import java.nio.DoubleBuffer;
+import java.nio.IntBuffer;
 import java.util.stream.IntStream;
 
 public class ParallelOps {
@@ -34,6 +36,8 @@ public class ParallelOps {
 
     // Buffers for MPI operations
     private static ByteBuffer statBuffer;
+    private static DoubleBuffer doubleBuffer;
+    private static IntBuffer intBuffer;
 
     public static void setupParallelism(String[] args) throws MPIException {
         MPI.Init(args);
@@ -50,6 +54,8 @@ public class ParallelOps {
         }
 
         statBuffer = MPI.newByteBuffer(DoubleStatistics.extent);
+        doubleBuffer = MPI.newDoubleBuffer(1);
+        intBuffer = MPI.newIntBuffer(1);
 
         parallelPattern =
             "---------------------------------------------------------\n" +
@@ -98,5 +104,17 @@ public class ParallelOps {
             statBuffer, DoubleStatistics.extent, MPI.BYTE,
             DoubleStatistics.reduceSummaries());
         return DoubleStatistics.getFromBuffer(statBuffer, 0);
+    }
+
+    public static double allReduce(double value) throws MPIException{
+        doubleBuffer.put(0, value);
+        procComm.allReduce(doubleBuffer, 1, MPI.DOUBLE, MPI.SUM);
+        return doubleBuffer.get(0);
+    }
+
+    public static int allReduce(int value) throws MPIException{
+        intBuffer.put(0, value);
+        procComm.allReduce(intBuffer, 1, MPI.INT, MPI.SUM);
+        return intBuffer.get(0);
     }
 }

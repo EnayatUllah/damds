@@ -82,8 +82,8 @@ public class Program {
             ParallelOps.setupParallelism(args);
             ParallelOps.setParallelDecomposition(config.numberDataPoints);
 
-            Utils.printMessage("\n== DAMDS run started on " + new Date() + " ==");
-            Utils.printMessage(config.toString(true));
+            Utils.printMessage("\n== DAMDS run started on " + new Date() + " ==\n");
+            Utils.printMessage(config.toString(false));
 
             readDistancesAndWeights();
             RefObj<Integer> missingDistCount = new RefObj<>();
@@ -92,7 +92,7 @@ public class Program {
 
             double missingDistPercent = missingDistCount.getValue() /
                                         (Math.pow(config.numberDataPoints, 2));
-            Utils.printMessage("\nDistance summary \n" + distanceSummary.toString() +"\n  MissingDistPercentage=" +
+            Utils.printMessage("\nDistance summary... \n" + distanceSummary.toString() +"\n  MissingDistPercentage=" +
                                missingDistPercent);
 
             double[][] preX = generateInitMapping(

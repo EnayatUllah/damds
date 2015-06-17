@@ -98,7 +98,7 @@ public class DAMDSSection {
         if (!maxLength.isPresent()) { return ""; }
         final int max = maxLength.get();
         final String prefix = "  ";
-        StringBuilder sb = new StringBuilder("Parameters\n");
+        StringBuilder sb = new StringBuilder("Parameters...\n");
         if (centerAligned) {
             IntStream.range(0, params.length).forEach(
                 i -> {

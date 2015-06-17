@@ -60,7 +60,6 @@ public class DAMDSSection {
     }
 
     public String toString(boolean centerAligned) {
-        System.out.println("Parameters...");
         String[] params = new String[]{"DistanceMatrixFile",
                                        "WeightMatrixFile",
                                        "Label Data File",
@@ -99,7 +98,7 @@ public class DAMDSSection {
         if (!maxLength.isPresent()) { return ""; }
         final int max = maxLength.get();
         final String prefix = "  ";
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder("Parameters\n");
         if (centerAligned) {
             IntStream.range(0, params.length).forEach(
                 i -> {

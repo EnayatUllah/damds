@@ -10,6 +10,7 @@ import mpi.MPIException;
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 import java.util.stream.IntStream;
 
 public class ParallelOps {
@@ -38,6 +39,8 @@ public class ParallelOps {
     private static ByteBuffer statBuffer;
     private static DoubleBuffer doubleBuffer;
     private static IntBuffer intBuffer;
+    static DoubleBuffer partialPointBuffer;
+    static DoubleBuffer pointBuffer;
 
     public static void setupParallelism(String[] args) throws MPIException {
         MPI.Init(args);
@@ -69,7 +72,7 @@ public class ParallelOps {
         MPI.Finalize();
     }
 
-    public static void setParallelDecomposition(int globalRowCount) {
+    public static void setParallelDecomposition(int globalRowCount, int targetDimension) {
         //	First divide points among processes
         Range[] rowRanges = RangePartitioner.partition(globalRowCount,
                                                        procCount);
@@ -95,6 +98,10 @@ public class ParallelOps {
                 threadPointStartOffsets[threadIdx] =
                     threadRowStartOffsets[threadIdx] * globalColCount;
             });
+
+        // Allocate vector buffers
+        partialPointBuffer = MPI.newDoubleBuffer(procRowCount * targetDimension);
+        pointBuffer = MPI.newDoubleBuffer(globalRowCount * targetDimension);
     }
 
     public static DoubleStatistics allReduce(DoubleStatistics stat) throws
@@ -116,5 +123,21 @@ public class ParallelOps {
         intBuffer.put(0, value);
         procComm.allReduce(intBuffer, 1, MPI.INT, MPI.SUM);
         return intBuffer.get(0);
+    }
+
+    public static DoubleBuffer allGather(
+        DoubleBuffer partialPointBuffer, int dimension) throws MPIException {
+
+        int [] lengths = new int[procCount];
+        int length = procRowCount * dimension;
+        lengths[procRank] = length;
+        procComm.allGather(lengths, 1, MPI.INT);
+        int [] displas = new int[procCount];
+        displas[0] = 0;
+        System.arraycopy(lengths, 0, displas, 1, procCount - 1);
+        Arrays.parallelPrefix(displas, (m, n) -> m + n);
+        int count = IntStream.of(lengths).sum(); // performs very similar to usual for loop, so no harm done
+        procComm.allGatherv(partialPointBuffer, length, MPI.DOUBLE, pointBuffer, lengths, displas, MPI.DOUBLE);
+        return  pointBuffer;
     }
 }

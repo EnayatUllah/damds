@@ -16,10 +16,7 @@ import java.io.*;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.text.DecimalFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -164,6 +161,11 @@ public class Program {
                         preX, config.targetDimension,
                         tCur, config.isSammon, distanceSummary.getAverage(),
                         BlockSize);
+
+                    /* TODO remove after testing*/
+                    for (double[] a : BC){
+                        System.out.println(Arrays.toString(a));
+                    }
 
                     X = calculateConjugateGradient(
                         preX, config.targetDimension, config.numberDataPoints,

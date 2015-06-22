@@ -609,6 +609,8 @@ public class Program {
             diff = Math.sqrt(2.0 * targetDimension)  * tCur;
         }
 
+        System.out.println("***threadRowCount " + threadRowCount);
+        System.out.println("***ParallelOps.threadRowStartOffsets[threadIdx] " + ParallelOps.threadRowStartOffsets[threadIdx]);
         for (int localRow = 0; localRow < threadRowCount; ++localRow) {
             int globalRow = localRow + ParallelOps.threadRowStartOffsets[threadIdx] +
                      ParallelOps.procRowStartOffset;

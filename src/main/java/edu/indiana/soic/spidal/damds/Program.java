@@ -162,11 +162,6 @@ public class Program {
                         tCur, config.isSammon, distanceSummary.getAverage(),
                         BlockSize);
 
-                    /* TODO remove after testing*/
-                    for (double[] a : BC){
-                        System.out.println(Arrays.toString(a));
-                    }
-
                     X = calculateConjugateGradient(
                         preX, config.targetDimension, config.numberDataPoints,
                         BC, config.cgIter, config.cgErrorThreshold, cgCount,
@@ -592,6 +587,12 @@ public class Program {
 
         int threadRowCount = ParallelOps.threadRowCounts[threadIdx];
         float [][] BofZ = new float[threadRowCount][ParallelOps.globalColCount];
+
+        /* TODO remove after testing */
+        for (float[] a : BofZ){
+            System.out.println(Arrays.toString(a));
+        }
+
 
         double vBlockValue = (double) -1;
 

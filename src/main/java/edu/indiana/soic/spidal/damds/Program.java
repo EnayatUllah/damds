@@ -137,7 +137,7 @@ public class Program {
 
             mainTimer.stop();
             Utils.printMessage(
-                "\nUp to the loop took = " + mainTimer.elapsed(
+                "\nUp to the loop took " + mainTimer.elapsed(
                     TimeUnit.SECONDS) + " seconds");
             mainTimer.start();
 
@@ -154,7 +154,7 @@ public class Program {
 
                 Utils.printMessage(
                     String.format(
-                        "\nStart of loop %d Temperature (T_Cur) %.5g\n",
+                        "\nStart of loop %d Temperature (T_Cur) %.5g",
                         loopNum, tCur));
 
                 int itrNum = 0;
@@ -185,7 +185,7 @@ public class Program {
                             String.format(
                                 "  Loop %d Iteration %d Avg CG count %.5g " +
                                 "Stress " +
-                                "%.5g\n", loopNum, itrNum,
+                                "%.5g", loopNum, itrNum,
                                 (cgCount.getValue() * 1.0 / (itrNum + 1)),
                                 stress));
                     }
@@ -198,7 +198,7 @@ public class Program {
                     Utils.printMessage(
                         String.format(
                             "  Loop %d Iteration %d Avg CG count %.5g " +
-                            "Stress %.5g\n",
+                            "Stress %.5g",
                             loopNum, itrNum,
                             (cgCount.getValue() * 1.0 / (itrNum + 1)), stress));
                 }
@@ -206,7 +206,7 @@ public class Program {
                 Utils.printMessage(
                     String.format(
                         "End of loop %d Total Iterations %d Avg CG count %.5g" +
-                        " Stress %.5g\n",
+                        " Stress %.5g",
                         loopNum, (itrNum + 1),
                         (cgCount.getValue() * 1.0 / (itrNum + 1)), stress));
 
@@ -224,10 +224,10 @@ public class Program {
 
             Utils.printMessage(
                 String.format(
-                    "Normalize1 = %.5g Normalize2 = %.5g\n", QoR1, QoR2));
+                    "Normalize1 = %.5g Normalize2 = %.5g", QoR1, QoR2));
             Utils.printMessage(
                 String.format(
-                    "Average of Delta(original distance) = %.5g\n",
+                    "Average of Delta(original distance) = %.5g",
                     distanceSummary.getAverage()));
 
 
@@ -268,7 +268,7 @@ public class Program {
             Utils.printMessage("  Total Iterations: " + SMACOF_REAL_ITER);
             Utils.printMessage(
                 String.format(
-                    "  Total CG Iterations: %d Avg. CG Iterations: %.5g\n",
+                    "  Total CG Iterations: %d Avg. CG Iterations: %.5g",
                     CG_REAL_ITER, (CG_REAL_ITER * 1.0) / SMACOF_REAL_ITER));
             Utils.printMessage("  Final Stress:\t" + finalStress);
             Utils.printMessage("== DAMDS run completed on " + new Date() + " ==");
@@ -762,10 +762,10 @@ public class Program {
         // Use Random class for generating random initial mapping solution.
         // Test the solution for the same problem by setting a constant random
         // see as shown below.
-        // Random rand = new Random(47);
+        Random rand = new Random(47);
 
         // Real random seed.
-        Random rand = new Random(System.currentTimeMillis());
+//        Random rand = new Random(System.currentTimeMillis());
         for (int i = 0; i < numDataPoints; i++) {
             for (int j = 0; j < targetDim; j++) {
                 if(rand.nextBoolean())

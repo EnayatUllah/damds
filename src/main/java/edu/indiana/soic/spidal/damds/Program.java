@@ -579,7 +579,7 @@ public class Program {
 
         float [][] BofZ = calculateBofZ(threadIdx, preX, targetDimension, tCur, isSammon, avgDist, blockSize);
         /* TODO remove after testing */
-        try {
+        /*try {
             PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/bc.out.txt");
             for (float[] a : BofZ){
                 writer.println(Arrays.toString(a));
@@ -589,7 +589,7 @@ public class Program {
         }
         catch (FileNotFoundException e) {
             e.printStackTrace();
-        }
+        }*/
         // Next we can calculate the BofZ * preX.
         return MatrixUtils.matrixMultiply(BofZ, preX, ParallelOps.threadRowCounts[threadIdx],
                                                   targetDimension, ParallelOps.globalColCount, blockSize);
@@ -603,6 +603,8 @@ public class Program {
         double vBlockValue = (double) -1;
 
         double diff = 0.0;
+        /* TODO remove after testing */
+        System.out.println("***tCur" + tCur);
         if (tCur > 10E-10) {
             diff = Math.sqrt(2.0 * targetDimension)  * tCur;
         }

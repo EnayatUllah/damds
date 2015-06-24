@@ -577,7 +577,7 @@ public class Program {
         Integer threadIdx, double[][] preX, int targetDimension, double tCur,
         boolean isSammon, double avgDist, int blockSize) {
 
-        float [][] BofZ = calculateBofZ(threadIdx, preX, targetDimension, tCur, isSammon, avgDist, blockSize);
+        float [][] BofZ = calculateBofZ(threadIdx, preX, targetDimension, tCur, isSammon, avgDist);
         /* TODO remove after testing */
         /*try {
             PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/bc.out.txt");
@@ -595,7 +595,20 @@ public class Program {
                                                   targetDimension, ParallelOps.globalColCount, blockSize);
     }
 
-    private static float[][] calculateBofZ(int threadIdx, double[][] preX, int targetDimension, double tCur, boolean isSammon, double avgDist, int blockSize) {
+    private static float[][] calculateBofZ(int threadIdx, double[][] preX, int targetDimension, double tCur, boolean isSammon, double avgDist) {
+
+         /* TODO remove after testing */
+        try {
+            PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/bc.bofz.prex.out.txt");
+            for (double[] a : preX){
+                writer.println(Arrays.toString(a));
+            }
+            writer.flush();
+            writer.close();
+        }
+        catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         int threadRowCount = ParallelOps.threadRowCounts[threadIdx];
         float [][] BofZ = new float[threadRowCount][ParallelOps.globalColCount];

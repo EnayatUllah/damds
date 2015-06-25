@@ -430,7 +430,7 @@ public class Program {
         r = calculateMM(X, targetDimension, numPoints, isSammon, avgDist, blockSize,
                         vArray);
          /* TODO remove after testing */
-        try {
+       /* try {
             PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/cg.mm.out.txt");
             for (double[] a : r){
                 writer.println(Arrays.toString(a));
@@ -441,7 +441,7 @@ public class Program {
         }
         catch (FileNotFoundException e) {
             e.printStackTrace();
-        }
+        }*/
         for(int i = 0; i < numPoints; ++i)
             for(int j = 0; j < targetDimension; ++j){
                 p[i][j] = BC[i][j] - r[i][j];

@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 import static edu.rice.hj.Module0.launchHabaneroApp;
 import static edu.rice.hj.Module1.forallChunked;
 
+
 public class Program {
     private static Options programOptions = new Options();
 
@@ -171,21 +172,6 @@ public class Program {
                         BC, config.cgIter, config.cgErrorThreshold, cgCount,
                         config.isSammon, distanceSummary.getAverage(),
                         BlockSize, vArray);
-
-                    /* TODO remove after testing */
-                    /*try {
-                        PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/cg.out.txt");
-                        for (double[] a : X){
-                            writer.println(Arrays.toString(a));
-                        }
-                        writer.flush();
-                        writer.close();
-                        System.out.println("****CG Done");
-                    }
-                    catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }*/
-
 
                     stress = calculateStress(
                         X, tCur, config.targetDimension, config.isSammon,
@@ -429,19 +415,7 @@ public class Program {
         X = preX;
         r = calculateMM(X, targetDimension, numPoints, isSammon, avgDist, blockSize,
                         vArray);
-         /* TODO remove after testing */
-       /* try {
-            PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/cg.mm.out.txt");
-            for (double[] a : r){
-                writer.println(Arrays.toString(a));
-            }
-            writer.flush();
-            writer.close();
-            Utils.printMessage("*******CG MM Done");
-        }
-        catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }*/
+
         for(int i = 0; i < numPoints; ++i)
             for(int j = 0; j < targetDimension; ++j){
                 p[i][j] = BC[i][j] - r[i][j];
@@ -533,15 +507,6 @@ public class Program {
         Integer threadIdx, double[][] x, int targetDimension, int numPoints,
         boolean isSammon, double avgDist, int blockSize, double[][] vArray) {
 
-        /* TODO remove after testing */
-       /* System.out.println("************** Inside cg mm");
-        System.out.println(x[3][0] + "\n" + targetDimension + "\n" + numPoints + "\nisSammon=" + isSammon + "\navgDist=" + avgDist + "\nbz=" + blockSize + "\nvarraylength=" + vArray.length + "\n" + "\nvArray[0][0]=" + vArray[0][0] + "\nvArray[0][1]=" + vArray[0][1]);*/
-
-        /* TODO remove after testing*/
-        /*short [][] weights = new short[10031][10031];
-        IntStream.range(0,10031).parallel().forEach(i -> IntStream.range(0,10031).parallel().forEach(j -> weights[i][j] = 1));
-        return MatrixUtils.matrixMultiply(weights, vArray[threadIdx], x, ParallelOps.threadRowCounts[threadIdx], targetDimension, numPoints, blockSize, ParallelOps.threadRowStartOffsets[threadIdx]);*/
-
         return MatrixUtils.matrixMultiply(
             (threadLocalRow, globalCol) -> {
                 int procLocalPnum =
@@ -620,38 +585,11 @@ public class Program {
         float [][] BofZ = calculateBofZ(threadIdx, preX, targetDimension, tCur, isSammon, avgDist);
 
         // Next we can calculate the BofZ * preX.
-        double [][] result = MatrixUtils.matrixMultiply(BofZ, preX, ParallelOps.threadRowCounts[threadIdx],
+        return MatrixUtils.matrixMultiply(BofZ, preX, ParallelOps.threadRowCounts[threadIdx],
                                                   targetDimension, ParallelOps.globalColCount, blockSize);
-        /* TODO remove after testing */
-        /*try {
-            PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/bc.mm.out.txt");
-            for (double[] a : result){
-                writer.println(Arrays.toString(a));
-            }
-            writer.flush();
-            writer.close();
-            System.out.println("****MM Done");
-        }
-        catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }*/
-        return result;
     }
 
     private static float[][] calculateBofZ(int threadIdx, double[][] preX, int targetDimension, double tCur, boolean isSammon, double avgDist) {
-
-         /* TODO remove after testing */
-        /*try {
-            PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/bc.bofz.prex.out.txt");
-            for (double[] a : preX){
-                writer.println(Arrays.toString(a));
-            }
-            writer.flush();
-            writer.close();
-        }
-        catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }*/
 
         int threadRowCount = ParallelOps.threadRowCounts[threadIdx];
         float [][] BofZ = new float[threadRowCount][ParallelOps.globalColCount];
@@ -659,15 +597,10 @@ public class Program {
         double vBlockValue = (double) -1;
 
         double diff = 0.0;
-        /* TODO remove after testing */
-//        System.out.println("***tCur" + tCur);
         if (tCur > 10E-10) {
             diff = Math.sqrt(2.0 * targetDimension)  * tCur;
         }
 
-        /* TODO remove after testing */
-//        System.out.println("***threadRowCount " + threadRowCount);
-//        System.out.println("***ParallelOps.threadRowStartOffsets[threadIdx] " + ParallelOps.threadRowStartOffsets[threadIdx]);
         for (int localRow = 0; localRow < threadRowCount; ++localRow) {
             int globalRow = localRow + ParallelOps.threadRowStartOffsets[threadIdx] +
                      ParallelOps.procRowStartOffset;
@@ -829,45 +762,9 @@ public class Program {
 
     static double[][] generateInitMapping(int numDataPoints,
                                           int targetDim) {
-        /* TODO remove after testing */
-        String file = "/N/u/sekanaya/sali/projects/salsabio/phy/updated_4.20.15/mds/initprex.txt";
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(file),
-                                                         Charset.defaultCharset())){
-            double x[][] = new double[numDataPoints][targetDim];
-            String line;
-            Pattern pattern = Pattern.compile("[\t ]");
-            int row = 0;
-            while ((line = br.readLine()) != null) {
-                if (Strings.isNullOrEmpty(line))
-                    continue; // continue on empty lines - "while" will break on null anyway;
-
-                String[] splits = pattern.split(line.trim());
-
-                for (int i = 0; i < splits.length; ++i){
-                    if (i == 0){
-                        splits[i] = splits[i].substring(1);
-                    }
-                    splits[i] = splits[i].substring(0,splits[i].length() -1);
-                    x[row][i] = Double.parseDouble(splits[i]);
-                }
-                ++row;
-            }
-            return x;
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-
-
-        /*double matX[][] = new double[numDataPoints][targetDim];
+        double matX[][] = new double[numDataPoints][targetDim];
         // Use Random class for generating random initial mapping solution.
-        // Test the solution for the same problem by setting a constant random
-        // see as shown below.
-        Random rand = new Random(47);
-
-        // Real random seed.
-//        Random rand = new Random(System.currentTimeMillis());
+        Random rand = new Random(System.currentTimeMillis());
         for (int i = 0; i < numDataPoints; i++) {
             for (int j = 0; j < targetDim; j++) {
                 if(rand.nextBoolean())
@@ -876,7 +773,7 @@ public class Program {
                     matX[i][j] = -rand.nextDouble();
             }
         }
-        return matX;*/
+        return matX;
     }
 
     private static DoubleStatistics calculateStatistics(

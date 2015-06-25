@@ -173,7 +173,7 @@ public class Program {
                         BlockSize, vArray);
 
                     /* TODO remove after testing */
-                    try {
+                    /*try {
                         PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/cg.out.txt");
                         for (double[] a : X){
                             writer.println(Arrays.toString(a));
@@ -184,7 +184,7 @@ public class Program {
                     }
                     catch (FileNotFoundException e) {
                         e.printStackTrace();
-                    }
+                    }*/
 
 
                     stress = calculateStress(
@@ -437,12 +437,11 @@ public class Program {
             }
             writer.flush();
             writer.close();
-            System.out.println("****CG MM Done");
+            Utils.printMessage("*******CG MM Done");
         }
         catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
         for(int i = 0; i < numPoints; ++i)
             for(int j = 0; j < targetDimension; ++j){
                 p[i][j] = BC[i][j] - r[i][j];
@@ -535,15 +534,15 @@ public class Program {
         boolean isSammon, double avgDist, int blockSize, double[][] vArray) {
 
         /* TODO remove after testing */
-        System.out.println("************** Inside cg mm");
-        System.out.println(x[3][0] + "\n" + targetDimension + "\n" + numPoints + "\nisSammon=" + isSammon + "\navgDist=" + avgDist + "\nbz=" + blockSize + "\nvarraylength=" + vArray.length + "\n" + "\nvArray[0][0]=" + vArray[0][0] + "\nvArray[0][1]=" + vArray[0][1]);
+       /* System.out.println("************** Inside cg mm");
+        System.out.println(x[3][0] + "\n" + targetDimension + "\n" + numPoints + "\nisSammon=" + isSammon + "\navgDist=" + avgDist + "\nbz=" + blockSize + "\nvarraylength=" + vArray.length + "\n" + "\nvArray[0][0]=" + vArray[0][0] + "\nvArray[0][1]=" + vArray[0][1]);*/
 
         /* TODO remove after testing*/
-        short [][] weights = new short[10031][10031];
+        /*short [][] weights = new short[10031][10031];
         IntStream.range(0,10031).parallel().forEach(i -> IntStream.range(0,10031).parallel().forEach(j -> weights[i][j] = 1));
-        return MatrixUtils.matrixMultiply(weights, vArray[threadIdx], x, ParallelOps.threadRowCounts[threadIdx], targetDimension, numPoints, blockSize, ParallelOps.threadRowStartOffsets[threadIdx]);
+        return MatrixUtils.matrixMultiply(weights, vArray[threadIdx], x, ParallelOps.threadRowCounts[threadIdx], targetDimension, numPoints, blockSize, ParallelOps.threadRowStartOffsets[threadIdx]);*/
 
-       /* return MatrixUtils.matrixMultiply(
+        return MatrixUtils.matrixMultiply(
             (threadLocalRow, globalCol) -> {
                 int procLocalPnum =
                     (threadLocalRow * ParallelOps.globalColCount) + globalCol +
@@ -555,7 +554,7 @@ public class Program {
             }, vArray[threadIdx], x, ParallelOps.threadRowCounts[threadIdx],
             targetDimension, numPoints, blockSize,
             ParallelOps.threadRowStartOffsets[threadIdx] +
-            ParallelOps.procRowStartOffset);*/
+            ParallelOps.procRowStartOffset);
     }
 
     private static double innerProductCalculation(double[][] a, double[][] b) {

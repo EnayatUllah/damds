@@ -172,6 +172,21 @@ public class Program {
                         config.isSammon, distanceSummary.getAverage(),
                         BlockSize, vArray);
 
+                    /* TODO remove after testing */
+                    try {
+                        PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/cg.out.txt");
+                        for (double[] a : X){
+                            writer.println(Arrays.toString(a));
+                        }
+                        writer.flush();
+                        writer.close();
+                        System.out.println("****CG Done");
+                    }
+                    catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+
+
                     stress = calculateStress(
                         X, tCur, config.targetDimension, config.isSammon,
                         distanceSummary.getAverage(),
@@ -587,7 +602,7 @@ public class Program {
         double [][] result = MatrixUtils.matrixMultiply(BofZ, preX, ParallelOps.threadRowCounts[threadIdx],
                                                   targetDimension, ParallelOps.globalColCount, blockSize);
         /* TODO remove after testing */
-        try {
+        /*try {
             PrintWriter writer = new PrintWriter("/N/u/sekanaya/sali/benchmarks/damds/phy/updated_4.20.15/bc.mm.out.txt");
             for (double[] a : result){
                 writer.println(Arrays.toString(a));
@@ -598,7 +613,7 @@ public class Program {
         }
         catch (FileNotFoundException e) {
             e.printStackTrace();
-        }
+        }*/
         return result;
     }
 

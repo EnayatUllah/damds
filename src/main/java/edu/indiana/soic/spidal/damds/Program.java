@@ -536,7 +536,7 @@ public class Program {
 
         /* TODO remove after testing */
         System.out.println("************** Inside cg mm");
-        System.out.println(x[3][0] + "\n" + targetDimension + "\n" + numPoints + "\nisSammon=" + isSammon + "\navgDist=" + avgDist + "\nbz=" + blockSize + "\nvarraylength=" + vArray.length + "\n" + Arrays.toString(vArray[0]) + "\nvArray[0][0]=" + vArray[0][0] + "\nv[0][1]=" + vArray[0][1]);
+        System.out.println(x[3][0] + "\n" + targetDimension + "\n" + numPoints + "\nisSammon=" + isSammon + "\navgDist=" + avgDist + "\nbz=" + blockSize + "\nvarraylength=" + vArray.length + "\n" + "\nvArray[0][0]=" + vArray[0][0] + "\nv[0][1]=" + vArray[0][1]);
 
         return MatrixUtils.matrixMultiply(
             (threadLocalRow, globalCol) -> {

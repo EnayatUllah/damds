@@ -728,6 +728,7 @@ public class Program {
         for (double [][] partial : partials){
             for (double [] point : partial){
                 System.arraycopy(point, 0, result[row], 0, dimension);
+                ++row;
             }
         }
     }

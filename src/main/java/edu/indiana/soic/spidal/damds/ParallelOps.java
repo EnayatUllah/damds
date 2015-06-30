@@ -152,7 +152,7 @@ public class ParallelOps {
 
         // Let's see if padding helps to avoid irregular allgather and improve performance
         if (padMe){
-            partialPointBuffer.position(procRowCount * dimension);
+            partialPointBuffer.position((unifiedProcRowCount -1) * dimension);
             partialPointBuffer.put(padding);
         }
 

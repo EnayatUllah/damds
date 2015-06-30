@@ -615,8 +615,9 @@ public class Program {
             mergePartials(partialMMs, targetDimension, ParallelOps.partialPointBuffer);
 
             MMTimings.startTiming(MMTimings.TimingTask.COMM, 0);
-            DoubleBuffer result = ParallelOps.allGather(
-                ParallelOps.partialPointBuffer, targetDimension);
+            /* TODO Remove after testing */
+            DoubleBuffer result = ParallelOps.paddedAllGather(
+                ParallelOps.paddedPartialPointBuffer, targetDimension);
             MMTimings.endTiming(MMTimings.TimingTask.COMM, 0);
             return extractPoints(result,
                 ParallelOps.globalColCount, targetDimension);
@@ -701,8 +702,9 @@ public class Program {
             mergePartials(partialBCs, targetDimension, ParallelOps.partialPointBuffer);
 
             BCTimings.startTiming(BCTimings.TimingTask.COMM, 0);
-            DoubleBuffer result = ParallelOps.allGather(
-                ParallelOps.partialPointBuffer, targetDimension);
+            /* TODO Remove after testing*/
+            DoubleBuffer result = ParallelOps.paddedAllGather(
+                ParallelOps.paddedPartialPointBuffer, targetDimension);
             BCTimings.endTiming(BCTimings.TimingTask.COMM, 0);
             return extractPoints(result,
                 ParallelOps.globalColCount, targetDimension);
@@ -786,11 +788,16 @@ public class Program {
     private static double[][] extractPoints(
         DoubleBuffer buffer, int numPoints, int dimension) {
         double [][] points = new double[numPoints][dimension];
+        double [] tmp = new double[dimension];
         int pos = 0;
-        for (int i = 0; i < numPoints; ++i){
+        int row = 0;
+        int allRows = buffer.capacity() / dimension;
+        for (int i = 0; i < allRows; ++i){
             buffer.position(pos);
-            buffer.get(points[i]);
             pos += dimension;
+            buffer.get(tmp);
+            if (tmp[0] == Double.NEGATIVE_INFINITY) continue;
+            points[row++] = tmp;
         }
         return  points;
     }

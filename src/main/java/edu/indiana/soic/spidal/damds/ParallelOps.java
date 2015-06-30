@@ -40,6 +40,15 @@ public class ParallelOps {
     private static DoubleBuffer doubleBuffer;
     private static IntBuffer intBuffer;
     static DoubleBuffer partialPointBuffer;
+
+    /* TODO remove after testing*/
+    static DoubleBuffer paddedPartialPointBuffer;
+    static boolean paddingEnabled;
+    static boolean padMe;
+    static double [] padding;
+    static int unifiedProcRowCount;
+    static DoubleBuffer paddedPointBuffer;
+
     static DoubleBuffer pointBuffer;
 
     public static void setupParallelism(String[] args) throws MPIException {
@@ -59,6 +68,7 @@ public class ParallelOps {
         statBuffer = MPI.newByteBuffer(DoubleStatistics.extent);
         doubleBuffer = MPI.newDoubleBuffer(1);
         intBuffer = MPI.newIntBuffer(1);
+
 
         parallelPattern =
             "---------------------------------------------------------\n" +
@@ -101,6 +111,18 @@ public class ParallelOps {
 
         // Allocate vector buffers
         partialPointBuffer = MPI.newDoubleBuffer(procRowCount * targetDimension);
+
+        /* TODO Remove after testing*/
+        int q = globalColCount / procCount;
+        int r = globalColCount % procCount;
+        paddingEnabled = r > 0;
+        paddedPartialPointBuffer = MPI.newDoubleBuffer((paddingEnabled ? q+1 : q) * targetDimension);
+        padMe = procRank < r;
+        padding = new double[targetDimension];
+        IntStream.range(0,targetDimension).forEach(i->padding[i] = Double.NEGATIVE_INFINITY);
+        paddedPointBuffer = MPI.newDoubleBuffer(paddingEnabled ? (globalRowCount+r)*targetDimension : globalRowCount*targetDimension);
+        unifiedProcRowCount = paddingEnabled ? q+1 : q;
+
         pointBuffer = MPI.newDoubleBuffer(globalRowCount * targetDimension);
     }
 
@@ -125,20 +147,17 @@ public class ParallelOps {
         return intBuffer.get(0);
     }
 
-    public static DoubleBuffer allGather(
+    public static DoubleBuffer paddedAllGather(
         DoubleBuffer partialPointBuffer, int dimension) throws MPIException {
 
-        int [] lengths = new int[procCount];
-        int length = procRowCount * dimension;
-        lengths[procRank] = length;
-        procComm.allGather(lengths, 1, MPI.INT);
-        int [] displas = new int[procCount];
-        displas[0] = 0;
-        System.arraycopy(lengths, 0, displas, 1, procCount - 1);
-        Arrays.parallelPrefix(displas, (m, n) -> m + n);
-        int count = IntStream.of(lengths).sum(); // performs very similar to usual for loop, so no harm done
-        procComm.allGatherv(partialPointBuffer, length, MPI.DOUBLE, pointBuffer, lengths, displas, MPI.DOUBLE);
-        return  pointBuffer;
+        // Let's see if padding helps to avoid irregular allgather and improve performance
+        if (padMe){
+            partialPointBuffer.position(procRowCount * dimension);
+            partialPointBuffer.put(padding);
+        }
+
+        procComm.allGather(partialPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE, paddedPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE);
+        return paddedPointBuffer;
     }
 
     public static void broadcast(DoubleBuffer buffer, int extent, int root)

@@ -801,8 +801,8 @@ public class Program {
             buffer.position(pos);
             pos += dimension;
             buffer.get(tmp);
-            if (i == 9407){
-                System.out.println("*****"  + Arrays.toString(tmp));
+            if ((i+1) % 14 == 0 && (i+1)/14 >671 && tmp[0] != Double.NEGATIVE_INFINITY){
+                System.out.println("*****ERROR at " + i + " "  + Arrays.toString(tmp));
             }
             if (tmp[0] - Double.NEGATIVE_INFINITY < 0.01) {
                 continue;

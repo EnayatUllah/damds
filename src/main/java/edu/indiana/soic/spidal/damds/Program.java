@@ -792,6 +792,9 @@ public class Program {
         int pos = 0;
         int row = 0;
         int allRows = buffer.capacity() / dimension;
+        if (allRows != ParallelOps.unifiedProcRowCount * ParallelOps.procCount){
+            throw new RuntimeException("*********CAN't BE*****");
+        }
         for (int i = 0; i < allRows; ++i){
             buffer.position(pos);
             pos += dimension;

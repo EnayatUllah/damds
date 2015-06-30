@@ -120,8 +120,8 @@ public class ParallelOps {
         padMe = procRank > r;
         padding = new double[targetDimension];
         IntStream.range(0,targetDimension).forEach(i->padding[i] = Double.NEGATIVE_INFINITY);
-        paddedPointBuffer = MPI.newDoubleBuffer(paddingEnabled ? (globalRowCount+r)*targetDimension : globalRowCount*targetDimension);
         unifiedProcRowCount = paddingEnabled ? q+1 : q;
+        paddedPointBuffer = MPI.newDoubleBuffer(paddingEnabled ? (unifiedProcRowCount*procCount)*targetDimension : globalRowCount*targetDimension);
 
         pointBuffer = MPI.newDoubleBuffer(globalRowCount * targetDimension);
     }

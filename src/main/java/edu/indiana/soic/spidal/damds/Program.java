@@ -797,7 +797,6 @@ public class Program {
             pos += dimension;
             buffer.get(tmp);
             if (tmp[0] == Double.NEGATIVE_INFINITY) {
-                System.out.println("********************CAME HERE");
                 continue;
             }
             points[row++] = tmp;

@@ -612,7 +612,8 @@ public class Program {
         }
 
         if (ParallelOps.procCount > 1) {
-            mergePartials(partialMMs, targetDimension, ParallelOps.partialPointBuffer);
+            /* TODO Remove after testing*/
+            mergePartials(partialMMs, targetDimension, ParallelOps.paddedPartialPointBuffer);
 
             MMTimings.startTiming(MMTimings.TimingTask.COMM, 0);
             /* TODO Remove after testing */
@@ -699,7 +700,8 @@ public class Program {
         }
 
         if (ParallelOps.procCount > 1) {
-            mergePartials(partialBCs, targetDimension, ParallelOps.partialPointBuffer);
+            /* TODO Remove after testing*/
+            mergePartials(partialBCs, targetDimension, ParallelOps.paddedPartialPointBuffer);
 
             BCTimings.startTiming(BCTimings.TimingTask.COMM, 0);
             /* TODO Remove after testing*/

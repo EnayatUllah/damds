@@ -117,7 +117,7 @@ public class ParallelOps {
         int r = globalColCount % procCount;
         paddingEnabled = r > 0;
         paddedPartialPointBuffer = MPI.newDoubleBuffer((paddingEnabled ? q+1 : q) * targetDimension);
-        padMe = procRank > r;
+        padMe = procRank >= r;
         padding = new double[targetDimension];
         IntStream.range(0,targetDimension).forEach(i->padding[i] = Double.NEGATIVE_INFINITY);
         unifiedProcRowCount = paddingEnabled ? q+1 : q;

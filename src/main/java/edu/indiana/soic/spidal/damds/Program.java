@@ -799,7 +799,7 @@ public class Program {
             buffer.position(pos);
             pos += dimension;
             buffer.get(tmp);
-            if (tmp[0] == Double.NEGATIVE_INFINITY) {
+            if (tmp[0] - Double.NEGATIVE_INFINITY < 0.01) {
                 continue;
             }
             points[row++] = tmp;

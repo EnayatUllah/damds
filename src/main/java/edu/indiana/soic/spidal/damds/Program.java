@@ -791,20 +791,18 @@ public class Program {
         DoubleBuffer buffer, int numPoints, int dimension) {
         double [][] points = new double[numPoints][dimension];
         double [] tmp = new double[dimension];
-        int pos = 0;
         int row = 0;
         int allRows = buffer.capacity() / dimension;
         if (allRows != ParallelOps.unifiedProcRowCount * ParallelOps.procCount){
             throw new RuntimeException("*********CAN't BE*****");
         }
+        buffer.position(0);
         for (int i = 0; i < allRows; ++i){
-            buffer.position(pos);
-            pos += dimension;
             buffer.get(tmp);
-            if ((i+1) % 14 == 0 && (i+1)/14 >671 && tmp[0] != Double.NEGATIVE_INFINITY){
+            if ((i+1) % 84 == 0 && (i+1)/84 > 71 && tmp[0] != Double.NEGATIVE_INFINITY){
                 System.out.println("*****ERROR at " + i + " "  + Arrays.toString(tmp));
             }
-            if (tmp[0] - Double.NEGATIVE_INFINITY < 0.01) {
+            if (tmp[0] == Double.NEGATIVE_INFINITY) {
                 continue;
             }
             points[row++] = tmp;

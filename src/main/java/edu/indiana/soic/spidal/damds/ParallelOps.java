@@ -160,7 +160,18 @@ public class ParallelOps {
             }
         }
 
+        paddedPointBuffer.position(0);
         procComm.allGather(partialPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE, paddedPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE);
+        int rows = paddedPointBuffer.capacity() / dimension;
+        double [] point = new double[dimension];
+        int count = 0;
+        for (int i = 0; i < rows; ++i){
+            paddedPointBuffer.get(point);
+            if (point[0] == Double.NEGATIVE_INFINITY){
+                ++count;
+            }
+        }
+        Utils.printMessage("=========padded rows " + count + " expected (120-71)=" + (120-71));
         return paddedPointBuffer;
     }
 

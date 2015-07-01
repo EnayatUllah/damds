@@ -613,7 +613,9 @@ public class Program {
 
         if (ParallelOps.procCount > 1) {
             /* TODO Remove after testing*/
-            mergePartials(partialMMs, targetDimension, ParallelOps.paddedPartialPointBuffer);
+            mergePartials(
+                partialMMs, targetDimension,
+                ParallelOps.paddedPartialPointBuffer);
 
             MMTimings.startTiming(MMTimings.TimingTask.COMM, 0);
             /* TODO Remove after testing */
@@ -701,7 +703,9 @@ public class Program {
 
         if (ParallelOps.procCount > 1) {
             /* TODO Remove after testing*/
-            mergePartials(partialBCs, targetDimension, ParallelOps.paddedPartialPointBuffer);
+            mergePartials(
+                partialBCs, targetDimension,
+                ParallelOps.paddedPartialPointBuffer);
 
             BCTimings.startTiming(BCTimings.TimingTask.COMM, 0);
             /* TODO Remove after testing*/
@@ -785,6 +789,18 @@ public class Program {
             }
         }
         return BofZ;
+    }
+
+    private static double[][] extractPointsOriginal(
+        DoubleBuffer buffer, int numPoints, int dimension) {
+        double [][] points = new double[numPoints][dimension];
+        int pos = 0;
+        for (int i = 0; i < numPoints; ++i){
+            buffer.position(pos);
+            buffer.get(points[i]);
+            pos += dimension;
+        }
+        return  points;
     }
 
     private static double[][] extractPoints(
@@ -948,7 +964,7 @@ public class Program {
             // Broadcast initial mapping to others
             ParallelOps.broadcast(buffer, numPoints * targetDim, 0);
         }
-        return extractPoints(buffer, numPoints, targetDim);
+        return extractPointsOriginal(buffer, numPoints, targetDim);
     }
 
     private static DoubleStatistics calculateStatistics(

@@ -793,15 +793,16 @@ public class Program {
         double [] tmp = new double[dimension];
         int row = 0;
         int allRows = buffer.capacity() / dimension;
-        if (allRows != ParallelOps.unifiedProcRowCount * ParallelOps.procCount){
+
+        /*if (allRows != ParallelOps.unifiedProcRowCount * ParallelOps.procCount){
             throw new RuntimeException("*********CAN't BE*****");
-        }
+        }*/
         buffer.position(0);
         for (int i = 0; i < allRows; ++i){
             buffer.get(tmp);
-            if ((i+1) % 84 == 0 && (i+1)/84 > 71 && tmp[0] != Double.NEGATIVE_INFINITY){
+           /* if ((i+1) % 84 == 0 && (i+1)/84 > 71 && tmp[0] != Double.NEGATIVE_INFINITY){
                 System.out.println("*****ERROR at " + i + " "  + Arrays.toString(tmp));
-            }
+            }*/
             if (tmp[0] == Double.NEGATIVE_INFINITY) {
                 continue;
             }
@@ -838,9 +839,9 @@ public class Program {
             ++count;
         }
 
-        if (count != ParallelOps.unifiedProcRowCount){
+        /*if (count != ParallelOps.unifiedProcRowCount){
             throw new RuntimeException("*********ERROR count: " + count + " expected " + ParallelOps.unifiedProcRowCount);
-        }
+        }*/
 
     }
 

@@ -823,14 +823,27 @@ public class Program {
     }
 
     private static void mergePartials(double [][][] partials, int dimension, DoubleBuffer result){
+        int count = 0;
         int pos = 0;
         for (double [][] partial : partials){
+            ++count;
             for (double [] point : partial){
                 result.position(pos);
                 result.put(point);
                 pos += dimension;
             }
         }
+
+        /* TODO Remove after testing */
+        if (ParallelOps.padMe){
+            result.put(ParallelOps.padding);
+            ++count;
+        }
+
+        if (count != ParallelOps.unifiedProcRowCount){
+            throw new RuntimeException("*********ERROR ");
+        }
+
     }
 
     private static double calculateMaxT(double maxOrigDistance, int targetDim) {

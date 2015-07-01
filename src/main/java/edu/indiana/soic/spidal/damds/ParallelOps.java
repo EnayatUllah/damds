@@ -150,12 +150,6 @@ public class ParallelOps {
     public static DoubleBuffer paddedAllGather(
         DoubleBuffer partialPointBuffer, int dimension) throws MPIException {
 
-        // Let's see if padding helps to avoid irregular allgather and improve performance
-        if (padMe){
-            partialPointBuffer.position((unifiedProcRowCount -1) * dimension);
-            partialPointBuffer.put(padding);
-        }
-
         procComm.allGather(partialPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE, paddedPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE);
         return paddedPointBuffer;
     }

@@ -841,7 +841,7 @@ public class Program {
         }
 
         if (count != ParallelOps.unifiedProcRowCount){
-            throw new RuntimeException("*********ERROR ");
+            throw new RuntimeException("*********ERROR count: " + count + " expected " + ParallelOps.unifiedProcRowCount);
         }
 
     }

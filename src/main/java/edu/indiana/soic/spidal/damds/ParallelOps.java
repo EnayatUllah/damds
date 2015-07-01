@@ -150,6 +150,16 @@ public class ParallelOps {
     public static DoubleBuffer paddedAllGather(
         DoubleBuffer partialPointBuffer, int dimension) throws MPIException {
 
+        if (padMe){
+            partialPointBuffer.position((unifiedProcRowCount -1)*dimension);
+            double [] tmp = new double[dimension];
+            partialPointBuffer.get(tmp);
+            if (tmp[0] != Double.NEGATIVE_INFINITY){
+                throw new RuntimeException("**************ERRor allgather expected neg infinity but found " + tmp[0]);
+
+            }
+        }
+
         procComm.allGather(partialPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE, paddedPointBuffer, unifiedProcRowCount*dimension, MPI.DOUBLE);
         return paddedPointBuffer;
     }

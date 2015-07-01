@@ -826,8 +826,8 @@ public class Program {
         int count = 0;
         int pos = 0;
         for (double [][] partial : partials){
-            ++count;
             for (double [] point : partial){
+                ++count;
                 result.position(pos);
                 result.put(point);
                 pos += dimension;

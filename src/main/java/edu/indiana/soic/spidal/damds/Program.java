@@ -74,6 +74,10 @@ public class Program {
      *             The options may also be given as longer names
      *             --configFile, --threadCount, and --nodeCount respectively
      */
+
+    // Enayat Code starts here -- Variables
+    public static double mse=0.0;
+    // Enayat Code ends here
     public static void main(String[] args) {
         Stopwatch mainTimer = Stopwatch.createStarted();
         Optional<CommandLine> parserResult =
@@ -294,7 +298,9 @@ public class Program {
 
             mainTimer.stop();
 
-
+            Utils.printMessage(
+                    String.format(
+                            " Mean Square Error of Approximation = %f\n",mse/config.numberDataPoints));
             Utils.printMessage("Finishing DAMDS run ...");
             long totalTime = mainTimer.elapsed(TimeUnit.MILLISECONDS);
             long loopTime = loopTimer.elapsed(TimeUnit.MILLISECONDS);
@@ -876,7 +882,7 @@ public class Program {
         int farLarge=0;
         int nearSmall=0;
         int farSmall=0;
-        double euclideanTh=0.00001;
+        double euclideanTh=0.0001;
         double sigmaTh=0.00001;
         double sigmaApprox = 0.0;
         int addApprox=0;
@@ -953,8 +959,10 @@ public class Program {
         }
         // Enayat Code starts here
         Utils.printMessage(String.format("Near points = %d , Far Points = %d \nLarge Terms = %d , Small Terms = %d \nNear Large = %d , Far Large = %d \n" +
-                "Near Small = %d , Far Small = %d \n Exact Stress = %f , Approx Sigma = %f ",near,far,largeT,smallT,nearLarge,farLarge,nearSmall,farSmall,sigma,sigmaApprox));
+                "Near Small = %d , Far Small = %d \nExact Stress = %f , Approx Sigma = %f ",near,far,largeT,smallT,nearLarge,farLarge,nearSmall,farSmall,sigma,sigmaApprox));
         // Enayat Code ends here
+        mse = mse + (sigmaApprox-sigma)*(sigmaApprox-sigma);
+
         return sigma;
     }
 

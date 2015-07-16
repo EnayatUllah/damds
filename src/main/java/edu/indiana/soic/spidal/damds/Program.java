@@ -179,7 +179,16 @@ public class Program {
                         distanceSummary.getSumOfSquare());
 
                     diffStress = preStress - stress;
+                    // Enayat Code:
+                    Utils.printMessage(
+                            String.format(
+                                    "\n %d Iteration, Temperature : %f  , Previous Stress : %f , Stress : %f \n",
+                                    itrNum, tCur,preStress,stress));
+                    // Enayat Code ends heres
+
                     preStress = stress;
+
+
                     preX = MatrixUtils.copy(X);
 
                     if ((itrNum % 10 == 0) || (itrNum >= MAX_ITER)) {
@@ -744,9 +753,23 @@ public class Program {
         if (tCur > 10E-10) {
             diff = Math.sqrt(2.0 * targetDim) * tCur;
         }
-
+        // Enayat Code starts here
+        int near=0;
+        int far=0;
+        int largeT=0;
+        int smallT=0;
+        int nearLarge=0;
+        int farLarge=0;
+        int nearSmall=0;
+        int farSmall=0;
+        double euclideanTh=0.00001;
+        double sigmaTh=0.00001;
+        double sigmaApprox = 0.0;
+        int addApprox=0;
+        // Enayat Code ends here
         int pointCount =
             ParallelOps.threadRowCounts[threadIdx] * ParallelOps.globalColCount;
+
 
         for (int i = 0; i < pointCount; ++i) {
             int procLocalPnum =
@@ -766,11 +789,58 @@ public class Program {
 
             double euclideanD = globalRow != globalCol ? calculateEuclideanDist(
                 preX, targetDim, globalRow, globalCol) : 0.0;
-
+            
             double heatD = origD - diff;
             double tmpD = origD >= diff ? heatD - euclideanD : 0;
+//            Utils.printMessage(String.format("HeatD = %f, EucldD=%f ",heatD,euclideanD));
+//            Utils.printMessage(String.format("tmD=%f ",tmpD));
+
+        // Enayat Code starts here
+            if(euclideanD < euclideanTh)
+            {
+                near++;
+                if(tmpD< sigmaTh)
+                {
+                    smallT++;
+                    nearSmall++;
+                }
+                else
+                {
+                    largeT++;
+                    nearLarge++;
+//                    addApprox =1;
+                }
+            }
+            else
+            {
+                addApprox =1;
+                far++;
+                if(tmpD< sigmaTh)
+                {
+                    smallT++;
+                    farSmall++;
+
+                }
+                else
+                {
+                    largeT++;
+                    farLarge++;
+                    addApprox =1;
+
+                }
+            }
+            if(addApprox ==1)
+                sigmaApprox += weight * tmpD * tmpD;
+            addApprox = 0;
+
+
+            // Enayat Code ends here
             sigma += weight * tmpD * tmpD;
         }
+        // Enayat Code starts here
+        Utils.printMessage(String.format("Near points = %d , Far Points = %d \nLarge Terms = %d , Small Terms = %d \nNear Large = %d , Far Large = %d \n" +
+                "Near Small = %d , Far Small = %d \n Exact Stress = %f , Approx Sigma = %f ",near,far,largeT,smallT,nearLarge,farLarge,nearSmall,farSmall,sigma,sigmaApprox));
+        // Enayat Code ends here
         return sigma;
     }
 

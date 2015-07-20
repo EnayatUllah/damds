@@ -1113,28 +1113,28 @@ public class Program {
         return Optional.fromNullable(null);
     }
 
-    public static <T> Iterator<T> sOfN(final Integer sampleSize, final Integer populationSize, final Iterator<T> populationItems) {
-        return new AbstractIterator<T>() {
-            Integer n = sampleSize;
-            Integer N = populationSize;
-            Integer t = 0;
-            Integer m = 0;
-            Random random = new Random();
-            @Override
-            protected T computeNext() {
-                while (m<n) {
-                    T next = populationItems.next();
-                    double u = random.nextDouble();
-                    if ((N-t)*u >= n-m) {
-                        t++;
-                    } else {
-                        t++; m++;
-                        return next;
-                    }
-                }
-                return endOfData();
-            }
-        };
-    }
+//    public static <T> Iterator<T> sOfN(final Integer sampleSize, final Integer populationSize, final Iterator<T> populationItems) {
+//        return new AbstractIterator<T>() {
+//            Integer n = sampleSize;
+//            Integer N = populationSize;
+//            Integer t = 0;
+//            Integer m = 0;
+//            Random random = new Random();
+//            @Override
+//            protected T computeNext() {
+//                while (m<n) {
+//                    T next = populationItems.next();
+//                    double u = random.nextDouble();
+//                    if ((N-t)*u >= n-m) {
+//                        t++;
+//                    } else {
+//                        t++; m++;
+//                        return next;
+//                    }
+//                }
+//                return endOfData();
+//            }
+//        };
+//    }
 
 }

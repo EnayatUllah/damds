@@ -300,7 +300,7 @@ public class Program {
 
             Utils.printMessage(
                     String.format(
-                            " Mean Square Error of Approximation = %f\n",mse/config.numberDataPoints));
+                            "Error of Approximation = %f\n",mse/config.numberDataPoints));
             Utils.printMessage("Finishing DAMDS run ...");
             long totalTime = mainTimer.elapsed(TimeUnit.MILLISECONDS);
             long loopTime = loopTimer.elapsed(TimeUnit.MILLISECONDS);
@@ -951,6 +951,8 @@ public class Program {
             }
             if(addApprox ==1)
                 sigmaApprox += weight * tmpD * tmpD;
+            else
+
             addApprox = 0;
 
 
@@ -959,7 +961,7 @@ public class Program {
         }
         // Enayat Code starts here
         Utils.printMessage(String.format("Near points = %d , Far Points = %d \nLarge Terms = %d , Small Terms = %d \nNear Large = %d , Far Large = %d \n" +
-                "Near Small = %d , Far Small = %d \nExact Stress = %f , Approx Sigma = %f ",near,far,largeT,smallT,nearLarge,farLarge,nearSmall,farSmall,sigma,sigmaApprox));
+                "Near Small = %d , Far Small = %d \nExact Sigma = %f , Approx Sigma = %f ",near,far,largeT,smallT,nearLarge,farLarge,nearSmall,farSmall,sigma,sigmaApprox));
         // Enayat Code ends here
         mse = mse + (sigmaApprox-sigma)*(sigmaApprox-sigma);
 
@@ -1110,4 +1112,29 @@ public class Program {
         }
         return Optional.fromNullable(null);
     }
+
+    public static <T> Iterator<T> sOfN(final Integer sampleSize, final Integer populationSize, final Iterator<T> populationItems) {
+        return new AbstractIterator<T>() {
+            Integer n = sampleSize;
+            Integer N = populationSize;
+            Integer t = 0;
+            Integer m = 0;
+            Random random = new Random();
+            @Override
+            protected T computeNext() {
+                while (m<n) {
+                    T next = populationItems.next();
+                    double u = random.nextDouble();
+                    if ((N-t)*u >= n-m) {
+                        t++;
+                    } else {
+                        t++; m++;
+                        return next;
+                    }
+                }
+                return endOfData();
+            }
+        };
+    }
+
 }
